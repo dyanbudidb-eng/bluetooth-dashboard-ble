@@ -55,6 +55,7 @@
             <div id="error-box" class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded hidden">
                 <p class="font-bold">Kesalahan Koneksi/Protokol:</p>
                 <p id="error-details" class="text-sm"></p>
+                <p class="text-xs mt-2">Penting: Buka Konsol Browser (F12 > Console) untuk melihat diagnosis properti BLE.</p>
             </div>
         </section>
     </div>
@@ -63,12 +64,12 @@
     <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
 
     <script>
-        // --- UUID Konfigurasi Perangkat (Dari tangkapan layar pengguna) ---
+        // --- UUID Konfigurasi Perangkat ---
         const UART_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; 
-        const TX_CHARACTERISTIC_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb'; // Tulis 'R' ke sini
-        const RX_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; // Terima data dari sini
-        
-        // Flag untuk mencoba mode tulis tanpa respons
+        const TX_CHARACTERISTIC_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
+        const RX_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; 
+        const EXPECTED_LENGTH = 66; // Total bytes yang diharapkan
+
         let useWriteWithoutResponse = false; 
 
         // --- Variabel Global & Konstanta Lainnya ---
@@ -76,6 +77,7 @@
         let rxCharacteristic = null;
         let txCharacteristic = null;
         let requestInterval = null;
+        let dataBuffer = new ArrayBuffer(0); // Buffer untuk mengumpulkan data yang terfragmentasi
         
         // Data structure definition (16 x 4-byte float)
         const DATA_MAP = [
@@ -112,7 +114,6 @@
         /**
          * Menghitung checksum XOR dari buffer data.
          * @param {DataView} dataView - Objek DataView dari paket.
-         * @returns {number} Nilai checksum yang dihitung.
          */
         function calculateChecksum(dataView) {
             let checksum = 0;
@@ -130,10 +131,9 @@
          * @returns {Array<number>|null} Array berisi 16 nilai float, atau null jika gagal.
          */
         function parseData(dataView) {
-            // Ukuran paket yang diharapkan: 1 (Start) + 64 (Data: 16 * 4 float) + 1 (Checksum) = 66 byte
-            const EXPECTED_LENGTH = 66;
             if (dataView.byteLength !== EXPECTED_LENGTH) {
-                errorDetails.textContent = `[Parsing Gagal] Panjang Data Diterima Salah: ${dataView.byteLength} byte (diharapkan ${EXPECTED_LENGTH}). Cek apakah perangkat merespons perintah 'R' dengan data lengkap.`;
+                // Ini seharusnya tidak terjadi lagi dengan buffer, tapi sebagai fallback
+                errorDetails.textContent = `[Parsing Gagal Internal] Panjang Data Diterima Salah: ${dataView.byteLength} byte (diharapkan ${EXPECTED_LENGTH}).`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
@@ -141,7 +141,7 @@
             // 1. Validasi Start Byte (0xAA)
             const startByte = dataView.getUint8(0);
             if (startByte !== 0xAA) {
-                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(16)} (diharapkan 0xAA).`;
+                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(16)} (diharapkan 0xAA). Data terfragmentasi salah.`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
@@ -174,60 +174,77 @@
          * Mengirim perintah 'R' (Request Data) ke perangkat Bluetooth.
          */
         async function sendRequest() {
-            if (!txCharacteristic) {
-                return;
-            }
+            if (!txCharacteristic) return;
             try {
                 const value = new TextEncoder().encode("R");
-                
-                // Gunakan mode tulis yang didukung
                 if (useWriteWithoutResponse) {
                     await txCharacteristic.writeValueWithoutResponse(value);
                 } else {
                     await txCharacteristic.writeValue(value);
                 }
-
             } catch (error) {
                 console.error("Gagal mengirim perintah 'R':", error);
-                // Jika gagal tulis, coba mode tulis tanpa respons (jika belum dicoba)
-                if (!useWriteWithoutResponse && error.message.includes('supported')) {
-                    console.warn("Tulis gagal. Mengubah ke mode writeWithoutResponse...");
-                    useWriteWithoutResponse = true;
-                    // Coba lagi sekali menggunakan mode baru
-                    return sendRequest();
-                }
-
-                statusMessage.textContent = "Gagal mengirim data. Coba sambungkan ulang.";
+                statusMessage.textContent = "Gagal mengirim perintah 'R'. Interval dihentikan.";
                 if (requestInterval) {
                     clearInterval(requestInterval);
+                    requestInterval = null;
                 }
             }
         }
 
         /**
          * Handler saat karakteristik RX (terima data) berubah (notifikasi).
+         * Menerapkan logika buffering untuk menangani fragmentasi.
          */
         function handleNotifications(event) {
-            const value = event.target.value;
-            const dataView = new DataView(value.buffer);
+            const incomingData = event.target.value.buffer;
             
-            const parsedValues = parseData(dataView);
+            // 1. Gabungkan data baru ke buffer yang sudah ada
+            const newBuffer = new ArrayBuffer(dataBuffer.byteLength + incomingData.byteLength);
+            const view = new Uint8Array(newBuffer);
+            
+            // Salin data lama
+            view.set(new Uint8Array(dataBuffer), 0);
+            // Salin data baru
+            view.set(new Uint8Array(incomingData), dataBuffer.byteLength);
+            
+            dataBuffer = newBuffer;
 
-            if (parsedValues) {
-                updateDashboard(parsedValues);
+            // 2. Cek apakah panjang data sudah cukup untuk satu paket
+            if (dataBuffer.byteLength >= EXPECTED_LENGTH) {
+                // Potong paket 66 byte pertama untuk diproses
+                const dataToParse = dataBuffer.slice(0, EXPECTED_LENGTH);
+                const dataView = new DataView(dataToParse);
+
+                const parsedValues = parseData(dataView);
+
+                if (parsedValues) {
+                    updateDashboard(parsedValues);
+                } else {
+                    // Jika parsing gagal, kemungkinan besar Start Byte/Checksum salah.
+                    // Buang paket yang gagal ini, tapi mungkin ada paket yang valid setelahnya.
+                    // Untuk keandalan, kita hanya membuang 1 byte pertama dan mencoba lagi pada event berikutnya
+                    // jika Start Byte tidak 0xAA, atau membuang 66 byte jika Checksum gagal.
+                    // Namun, untuk kasus ini, kita hanya buang 66 byte karena fragmentasi sudah ditangani.
+                    console.error("Parsing gagal, membuang paket 66 byte yang tidak valid.");
+                }
+
+                // 3. Pindahkan buffer ke sisa data (data yang melebihi 66 byte)
+                dataBuffer = dataBuffer.slice(EXPECTED_LENGTH); 
+
+                if (dataBuffer.byteLength > 0) {
+                    console.warn(`[Buffer Warning] Ada ${dataBuffer.byteLength} byte sisa data setelah parsing paket 66 byte. Menunggu paket berikutnya.`);
+                }
+            } else {
+                // Tampilkan di konsol berapa byte yang sudah diterima
+                console.log(`Menerima ${incomingData.byteLength} byte. Total di buffer: ${dataBuffer.byteLength}/${EXPECTED_LENGTH}`);
             }
         }
 
-        /**
-         * Menginisialisasi dashboard dan menampilkan nilai data.
-         */
         function updateDashboard(values) {
             let html = '';
-
             values.forEach((value, index) => {
                 const dataInfo = DATA_MAP[index];
-                // Logika tampilan data (sama seperti sebelumnya)
-                // ... (tidak diubah)
                 let formattedValue = value.toFixed(3); 
                 let displayUnit = dataInfo.unit;
                 let bgColor = 'bg-blue-50'; 
@@ -257,13 +274,9 @@
                     </div>
                 `;
             });
-
             dataDashboard.innerHTML = html;
         }
 
-        /**
-         * Fungsi utama untuk menyambung ke perangkat Bluetooth.
-         */
         async function connectBluetooth() {
             if (!navigator.bluetooth) {
                 statusMessage.textContent = "Web Bluetooth tidak didukung di browser ini. Gunakan Chrome melalui HTTPS/localhost.";
@@ -290,36 +303,29 @@
                 const service = await server.getPrimaryService(UART_SERVICE_UUID);
                 statusMessage.textContent = "Layanan ditemukan. Mencari Karakteristik (FFE1 & FFE2)...";
 
-                // 4. Get RX and TX Characteristics
                 rxCharacteristic = await service.getCharacteristic(RX_CHARACTERISTIC_UUID);
                 txCharacteristic = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
 
                 // --- DIAGNOSIS PROPERTI ---
                 let errorMsg = '';
                 
-                // Cek Properti RX (FFE1) - HARUS Notify
-                if (rxCharacteristic.properties.notify) {
-                    console.log("RX (FFE1) mendukung Notify. OK.");
-                } else {
-                    errorMsg += 'Karakteristik RX (FFE1) tidak mendukung NOTIFY/INDICATE. Tidak bisa menerima data.\n';
+                if (!(rxCharacteristic.properties.notify || rxCharacteristic.properties.indicate)) {
+                    errorMsg += 'Karakteristik RX (FFE1) tidak mendukung NOTIFY/INDICATE.\n';
                 }
 
-                // Cek Properti TX (FFE2) - HARUS Write atau WriteWithoutResponse
                 if (txCharacteristic.properties.write) {
-                    console.log("TX (FFE2) mendukung Write.");
                     useWriteWithoutResponse = false;
                 } else if (txCharacteristic.properties.writeWithoutResponse) {
-                    console.log("TX (FFE2) mendukung Write Without Response.");
                     useWriteWithoutResponse = true;
                 } else {
-                    errorMsg += 'Karakteristik TX (FFE2) tidak mendukung WRITE (atau Write Without Response). Tidak bisa mengirim perintah "R".\n';
+                    errorMsg += 'Karakteristik TX (FFE2) tidak mendukung WRITE.\n';
                 }
 
                 if (errorMsg) {
                     throw new Error(`Karakteristik tidak mendukung operasi yang diperlukan:\n${errorMsg}`);
                 }
                 
-                // 5. Enable RX Notifications (Hanya jika properti Notify/Indicate didukung)
+                // 5. Enable RX Notifications
                 await rxCharacteristic.startNotifications();
                 rxCharacteristic.addEventListener('characteristicvaluechanged', handleNotifications);
                 
@@ -334,16 +340,18 @@
                 console.error("Kesalahan koneksi/GATT:", error);
                 
                 let detailText = `Error: ${error.message}`;
-                if (error.message.includes('Karakteristik tidak mendukung operasi')) {
+                if (error.message.includes('GATT Error: Not supported')) {
+                    detailText = `[GATT Error: Not supported] Kegagalan ini, biasanya disebabkan oleh tidak adanya CCCD (2902) pada Karakteristik FFE1.`;
+                } else if (error.message.includes('Karakteristik tidak mendukung operasi')) {
                     detailText = error.message;
-                } else if (error.message.includes('GATT Error: Not supported')) {
-                    detailText = `[GATT Error: Not supported] Kesalahan ini biasanya disebabkan oleh Karakteristik FFE1 atau FFE2 yang tidak memiliki properti Notify/Write. Cek konsol browser untuk diagnosis lebih lanjut.`;
                 }
                 
                 errorDetails.textContent = detailText;
                 errorBox.classList.remove('hidden');
 
                 statusMessage.textContent = "Koneksi Gagal. Cek Detail Error di bawah.";
+                
+                // Cleanup
                 connectButton.disabled = false;
                 disconnectButton.disabled = true;
                 deviceInfo.textContent = "";
@@ -354,32 +362,28 @@
             }
         }
 
-        /**
-         * Memutuskan koneksi Bluetooth.
-         */
         function disconnectBluetooth() {
             if (device && device.gatt.connected) {
                 device.gatt.disconnect();
             } else {
-                onDisconnected(); // Perbarui UI meskipun sudah terputus
+                onDisconnected(); 
             }
         }
 
-        /**
-         * Handler saat koneksi Bluetooth terputus.
-         */
         function onDisconnected() {
             if (requestInterval) {
                 clearInterval(requestInterval);
                 requestInterval = null;
             }
             if (rxCharacteristic) {
+                // Hapus event listener sebelum karakteristrik dibersihkan
                 rxCharacteristic.removeEventListener('characteristicvaluechanged', handleNotifications);
             }
             statusMessage.textContent = "Koneksi Bluetooth terputus.";
             deviceInfo.textContent = "";
             connectButton.disabled = false;
             disconnectButton.disabled = true;
+            dataBuffer = new ArrayBuffer(0); // Reset buffer saat terputus
         }
 
         // Initialize dashboard display with 0.000 values
