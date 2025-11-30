@@ -71,9 +71,9 @@
         
         // Standard UUIDs for Nordic UART Service (NUS)
         // Jika perangkat Anda menggunakan UUID kustom (bukan NUS), Anda harus mengganti UUID ini.
-        const UART_SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
-        const TX_CHARACTERISTIC_UUID = '6e400002-b5a3-f393-e0a9-e50e24dcca9e'; // Write 'R' command here
-        const RX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e'; // Receive data from here
+        const UART_SERVICE_UUID =      '0000ffe0-0000-1000-8000-00805f9b34fb';
+        const TX_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; // Write 'R' command here
+        const RX_CHARACTERISTIC_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb'; // Receive data from here
         
         // Data structure definition (16 x 4-byte float)
         const DATA_MAP = [
