@@ -1070,7 +1070,8 @@
             
             // --- 3. Update Ringkasan Utama (SOC, SOH, Suhu, Time Remaining) ---
             const soc = Math.min(100, Math.max(0, values[DATA_INDICES.SOC].toFixed(2)));
-            const sohAvg = Math.min(100, Math.max(0, ((values[DATA_INDICES.SOH_1] + values[DATA_INDICES.SOH_2]) / 2).toFixed(2))); 
+            const sohAvg = Math.min(100, Math.max(0, values[DATA_INDICES.SOH].toFixed(2)));
+            //const sohAvg = Math.min(100, Math.max(0, ((values[DATA_INDICES.SOH_1] + values[DATA_INDICES.SOH_2]) / 2).toFixed(2))); 
             const maxTemp = Math.max(values[DATA_INDICES.TEMP_1], values[DATA_INDICES.TEMP_2]).toFixed(1);
             const remainingCap = values[DATA_INDICES.CAP_REMAINING];
             const current = values[DATA_INDICES.CURRENT];
