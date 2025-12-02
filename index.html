@@ -406,7 +406,6 @@
         const totalChargeWhElement = document.getElementById('total-charge-wh');
         const totalDischargeWhElement = document.getElementById('total-discharge-wh');
         const themeIcon = document.getElementById('theme-icon');
-        const SOHValueElement = document.getElementById('SOH-value');
 
         // --- Utility Functions (formatTime, calculateChecksum, parseData, sendRequest, handleNotifications, onDisconnected) ---
         function formatTime(hours) {
@@ -537,7 +536,7 @@
             dataBuffer = new ArrayBuffer(0); 
             
             // Reset display
-            const initialValues = Array(17).fill(0.0);
+            const initialValues = Array(16).fill(0.0);
             updateDashboard(initialValues);
             safetyStatusSection.classList.add('hidden'); 
             
@@ -1193,7 +1192,7 @@
             // Muat tema sebelum memuat data
             loadTheme(); 
             
-            const initialValues = Array(17).fill(0.0);
+            const initialValues = Array(16).fill(0.0);
             updateDashboard(initialValues);
             
             // Muat grafik awal dari localStorage
