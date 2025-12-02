@@ -428,7 +428,7 @@
         }
         function calculateChecksum(dataView) {
             let checksum = 0;
-            for (let i = 1; i <= 64; i++) {
+            for (let i = 1; i <= 68; i++) {
                 checksum ^= dataView.getUint8(i);
             }
             return checksum;
@@ -492,8 +492,8 @@
             
             dataBuffer = newBuffer;
 
-            if (dataBuffer.byteLength >= EXPECTED_LENGTH) {
-                const dataToParse = dataBuffer.slice(0, EXPECTED_LENGTH);
+            if (dataBuffer.byteLength >= ) {
+                const dataToParse = dataBuffer.slice(0, );
                 const dataView = new DataView(dataToParse);
 
                 const parsedValues = parseData(dataView);
@@ -515,7 +515,7 @@
                     console.error("Parsing gagal, membuang paket 70 byte yang tidak valid.");
                 }
 
-                dataBuffer = dataBuffer.slice(EXPECTED_LENGTH); 
+                dataBuffer = dataBuffer.slice(); 
 
                 if (dataBuffer.byteLength > 0) {
                     console.warn(`[Buffer Warning] ${dataBuffer.byteLength} byte data sisa.`);
