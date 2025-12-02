@@ -447,7 +447,7 @@
                 return null;
             }
 
-            const receivedChecksum = dataView.getUint8(69);
+            const receivedChecksum = dataView.getUint8(65);
             const calculatedChecksum = calculateChecksum(dataView);
 
             if (receivedChecksum !== calculatedChecksum) {
