@@ -340,7 +340,7 @@
             TEMP_1: 9, TEMP_2: 10, 
             CAP_REMAINING: 11,
             SOH_1: 12, SOH_2: 13, 
-            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15, SOH_3: 16,
+            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15, SOH: 16,
         };
 
         // Definisi semua 16 data.
@@ -364,7 +364,7 @@
             { label: 'Kesehatan SOH 2', unit: '%', index: 13, showInExtra: true, icon: 'heart-pulse' },
             { label: 'Relay Pengisian', unit: '', index: 14, showInExtra: true, icon: 'plug' },
             { label: 'Relay Pengurasan', unit: '', index: 15, showInExtra: true, icon: 'fire' },
-            { label: 'SOH 3', unit: '%', index: 16, showInExtra: true},
+            { label: 'SOH', unit: '%', index: 16, showInExtra: false},
         ];
 
 
@@ -406,7 +406,7 @@
         const totalChargeWhElement = document.getElementById('total-charge-wh');
         const totalDischargeWhElement = document.getElementById('total-discharge-wh');
         const themeIcon = document.getElementById('theme-icon');
-        //const SOH_3ValueElement = document.getElementById('soh_3-value');
+        
         
 
         // --- Utility Functions (formatTime, calculateChecksum, parseData, sendRequest, handleNotifications, onDisconnected) ---
@@ -1071,7 +1071,7 @@
             
             // --- 3. Update Ringkasan Utama (SOC, SOH, Suhu, Time Remaining) ---
             const soc = Math.min(100, Math.max(0, values[DATA_INDICES.SOC].toFixed(2)));
-           // const soh_3 = Math.min(100, Math.max(0, values[DATA_INDICES.SOH_3].toFixed(2)));
+            // const soh_3 = Math.min(100, Math.max(0, values[DATA_INDICES.SOH_3].toFixed(2)));
             const sohAvg = Math.min(100, Math.max(0, ((values[DATA_INDICES.SOH_1] + values[DATA_INDICES.SOH_2]) / 2).toFixed(2))); 
             const maxTemp = Math.max(values[DATA_INDICES.TEMP_1], values[DATA_INDICES.TEMP_2]).toFixed(1);
             const remainingCap = values[DATA_INDICES.CAP_REMAINING];
