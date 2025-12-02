@@ -308,7 +308,7 @@
         const UART_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; 
         const TX_CHARACTERISTIC_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
         const RX_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; 
-        const EXPECTED_LENGTH = 66; 
+        const EXPECTED_LENGTH = 70; 
 
         // --- Variabel Global & Konstanta Lainnya ---
         let device = null;
@@ -340,7 +340,7 @@
             TEMP_1: 9, TEMP_2: 10, 
             CAP_REMAINING: 11,
             SOH_1: 12, SOH_2: 13, 
-            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15,
+            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15, SOH: 16,
         };
 
         // Definisi semua 16 data.
@@ -364,6 +364,7 @@
             { label: 'Kesehatan SOH 2', unit: '%', index: 13, showInExtra: true, icon: 'heart-pulse' },
             { label: 'Relay Pengisian', unit: '', index: 14, showInExtra: true, icon: 'plug' },
             { label: 'Relay Pengurasan', unit: '', index: 15, showInExtra: true, icon: 'fire' },
+            { label: 'SOH', unit: '%', index: 16, showInExtra: true, icon: 'heart-pulse' },
         ];
 
 
@@ -427,7 +428,7 @@
         }
         function calculateChecksum(dataView) {
             let checksum = 0;
-            for (let i = 1; i <= 64; i++) {
+            for (let i = 1; i <= 68; i++) {
                 checksum ^= dataView.getUint8(i);
             }
             return checksum;
@@ -441,16 +442,16 @@
 
             const startByte = dataView.getUint8(0);
             if (startByte !== 0xAA) {
-                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(16)}.`;
+                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(17)}.`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
 
-            const receivedChecksum = dataView.getUint8(65);
+            const receivedChecksum = dataView.getUint8(69);
             const calculatedChecksum = calculateChecksum(dataView);
 
             if (receivedChecksum !== calculatedChecksum) {
-                errorDetails.textContent = `[Parsing Gagal] Checksum salah. Diterima: 0x${receivedChecksum.toString(16)}.`;
+                errorDetails.textContent = `[Parsing Gagal] Checksum salah. Diterima: 0x${receivedChecksum.toString(17)}.`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
