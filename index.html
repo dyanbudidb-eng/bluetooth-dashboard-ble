@@ -308,7 +308,7 @@
         const UART_SERVICE_UUID = '0000ffe0-0000-1000-8000-00805f9b34fb'; 
         const TX_CHARACTERISTIC_UUID = '0000ffe2-0000-1000-8000-00805f9b34fb'; 
         const RX_CHARACTERISTIC_UUID = '0000ffe1-0000-1000-8000-00805f9b34fb'; 
-        const EXPECTED_LENGTH = 66; 
+        const EXPECTED_LENGTH = 70; 
 
         // --- Variabel Global & Konstanta Lainnya ---
         let device = null;
@@ -340,10 +340,10 @@
             TEMP_1: 9, TEMP_2: 10, 
             CAP_REMAINING: 11,
             SOH_1: 12, SOH_2: 13, 
-            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15,
+            STATUS_CHARGE: 14, STATUS_DISCHARGE: 15, SOH: 16,
         };
 
-        // Definisi semua 16 data.
+        // Definisi semua 17 data.
         const ALL_DATA_MAP = [
             // Dikecualikan dari 'Tambahan' (sudah di Ringkasan atau Inti)
             { label: 'Tegangan Total', unit: 'V', index: 0, showInExtra: false },
@@ -364,6 +364,7 @@
             { label: 'Kesehatan SOH 2', unit: '%', index: 13, showInExtra: true, icon: 'heart-pulse' },
             { label: 'Relay Pengisian', unit: '', index: 14, showInExtra: true, icon: 'plug' },
             { label: 'Relay Pengurasan', unit: '', index: 15, showInExtra: true, icon: 'fire' },
+            { label: 'SOH', unit: '%', index: 16, showInExtra: false },
         ];
 
 
@@ -405,7 +406,7 @@
         const totalChargeWhElement = document.getElementById('total-charge-wh');
         const totalDischargeWhElement = document.getElementById('total-discharge-wh');
         const themeIcon = document.getElementById('theme-icon');
-        
+        const SOHValueElement = document.getElementById('SOH-value');
 
         // --- Utility Functions (formatTime, calculateChecksum, parseData, sendRequest, handleNotifications, onDisconnected) ---
         function formatTime(hours) {
@@ -441,7 +442,7 @@
 
             const startByte = dataView.getUint8(0);
             if (startByte !== 0xAA) {
-                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(16)}.`;
+                errorDetails.textContent = `[Parsing Gagal] Start Byte salah: 0x${startByte.toString(17)}.`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
@@ -450,14 +451,14 @@
             const calculatedChecksum = calculateChecksum(dataView);
 
             if (receivedChecksum !== calculatedChecksum) {
-                errorDetails.textContent = `[Parsing Gagal] Checksum salah. Diterima: 0x${receivedChecksum.toString(16)}.`;
+                errorDetails.textContent = `[Parsing Gagal] Checksum salah. Diterima: 0x${receivedChecksum.toString(17)}.`;
                 errorBox.classList.remove('hidden');
                 return null;
             }
 
             const values = [];
             let offset = 1; 
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < 17; i++) {
                 const floatValue = dataView.getFloat32(offset, true);
                 values.push(floatValue);
                 offset += 4; 
@@ -511,7 +512,7 @@
                     statusMessage.textContent = `Terkoneksi | Data terakhir diterima dari BMS.`;
                 } else {
                     statusMessage.textContent = `Terkoneksi | Data diterima, namun gagal diuraikan (parsing error).`;
-                    console.error("Parsing gagal, membuang paket 66 byte yang tidak valid.");
+                    console.error("Parsing gagal, membuang paket 70 byte yang tidak valid.");
                 }
 
                 dataBuffer = dataBuffer.slice(EXPECTED_LENGTH); 
@@ -536,7 +537,7 @@
             dataBuffer = new ArrayBuffer(0); 
             
             // Reset display
-            const initialValues = Array(16).fill(0.0);
+            const initialValues = Array(17).fill(0.0);
             updateDashboard(initialValues);
             safetyStatusSection.classList.add('hidden'); 
             
@@ -1191,7 +1192,7 @@
             // Muat tema sebelum memuat data
             loadTheme(); 
             
-            const initialValues = Array(16).fill(0.0);
+            const initialValues = Array(17).fill(0.0);
             updateDashboard(initialValues);
             
             // Muat grafik awal dari localStorage
