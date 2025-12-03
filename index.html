@@ -233,7 +233,17 @@
             </div>
 
             <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
-                <canvas id="whChart"></canvas>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <h4 class="text-center font-semibold text-green-600 dark:text-green-400 mb-2">Charge (Energi Masuk)</h4>
+                        <canvas id="whChargeCanvas"></canvas>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="text-center font-semibold text-red-600 dark:text-red-400 mb-2">Discharge (Energi Keluar)</h4>
+                        <canvas id="whDischargeCanvas"></canvas>
+                    </div>
+                </div>
+                
                 <p id="chart-status" class="text-center text-sm text-gray-500 dark:text-gray-400 mt-2">Memuat data Wh dari penyimpanan lokal...</p>
                 <div class="flex flex-wrap justify-center space-x-8 text-sm mt-4 font-semibold">
                     <p class="text-green-600"><span class="inline-block w-3 h-3 rounded-full bg-green-500 mr-1"></span> Total Charge: <span id="total-charge-wh">0.000 Wh</span></p>
@@ -294,7 +304,9 @@
         let requestInterval = null;
         let dataBuffer = new ArrayBuffer(0); 
         
-        let whChart = null; // Instans Chart.js
+        //let whChart = null; // Instans Chart.js
+        let whChargeChart = null; // Instans Chart.js untuk Charge
+        let whDischargeChart = null; // Instans Chart.js untuk Discharge
         let lastLogTime = 0; // Untuk batasan logging 10 detik
         const LOG_INTERVAL_MS = 10000; // Interval logging 10 detik
         const MAX_LOG_ENTRIES = 10000; // Batas untuk mencegah localStorage penuh
@@ -842,7 +854,7 @@
                     chartStatusElement.textContent = `Data ${filteredLogs.length} log, diagregasi menjadi ${numPoints} titik (${config.label}).`;
                 }
 
-                renderChart(aggregatedData, config.label); 
+             renderEnergyCharts(aggregatedData, config.label);
 
             } catch (error) {
                 console.error("Gagal mengambil/memproses data grafik Wh dari localStorage:", error);
@@ -851,28 +863,33 @@
         }
         
         // --- Logic Pindah Tema (Light/Dark Mode) ---
-        function updateChartColors(isDark) {
-            if (!whChart) return;
-            
-            // Tentukan warna teks dan grid berdasarkan mode
-            const textColor = isDark ? '#f3f4f6' : '#1f2937'; // gray-100 atau gray-800
-            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-            
-            // Terapkan warna baru ke opsi chart
-            whChart.options.plugins.title.color = textColor;
-            whChart.options.plugins.legend.labels.color = textColor; // Warna legend
+       function updateChartColors(isDark) {
+    // Gunakan kedua instance chart
+    if (!whChargeChart && !whDischargeChart) return;
+    
+    // Tentukan warna teks dan grid berdasarkan mode
+    const textColor = isDark ? '#f3f4f6' : '#1f2937'; // gray-100 atau gray-800
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    const charts = [whChargeChart, whDischargeChart];
+    
+    // Update warna untuk kedua chart
+    charts.forEach(whChart => {
+        if (whChart) {
+             // Terapkan warna baru ke opsi chart
+            whChart.options.plugins.legend.labels.color = textColor; 
             whChart.options.scales.x.ticks.color = textColor;
             whChart.options.scales.y.ticks.color = textColor;
             whChart.options.scales.y.title.color = textColor;
             whChart.options.scales.y.grid.color = gridColor;
-            
-            // Update warna latar belakang Chart JS
-            const chartContainer = document.getElementById('whChart').closest('div');
-            // Menggunakan warna yang konsisten dengan .dark .bg-gray-700
-            chartContainer.style.backgroundColor = isDark ? '#374151' : '#f9fafb'; 
-            
             whChart.update();
         }
+    });
+
+    // Update warna latar belakang Chart JS container
+    const chartContainer = document.getElementById('whChargeCanvas').closest('div').closest('div');
+    chartContainer.style.backgroundColor = isDark ? '#374151' : '#f9fafb'; 
+}
 
         function applyTheme(isDark) {
             const body = document.body;
@@ -914,103 +931,125 @@
         }
 
 
-        /**
-         * MERENDER GRAFIK BATANG (BAR CHART) UNTUK PROFIL CHARGE DAN DISCHARGE.
-         */
-        function renderChart(data, periodLabel) { 
-            const ctx = document.getElementById('whChart').getContext('2d');
-            
-            // Update ringkasan angka global
-            totalChargeWhElement.textContent = `${data.totalChargeWh.toFixed(3)} Wh`;
-            totalDischargeWhElement.textContent = `${data.totalDischargeWh.toFixed(3)} Wh`;
+       // --- Logic Pindah Tema (Light/Dark Mode) ---
+// ... (loadTheme dan toggleTheme tetap sama) ...
+// ... (fungsi updateChartColors yang sudah dimodifikasi) ...
 
-            if (whChart) {
-                whChart.destroy();
-            }
 
-            const isDark = document.body.classList.contains('dark');
-            const textColor = isDark ? '#f3f4f6' : '#1f2937'; 
-            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+/**
+ * HELPER: MERENDER SATU GRAFIK BATANG (BAR CHART) UNTUK CHARGE ATAU DISCHARGE.
+ */
+function renderSingleChart(canvasId, data, periodLabel, chartType) {
+    const ctx = document.getElementById(canvasId).getContext('2d');
 
-            whChart = new Chart(ctx, {
-                type: 'bar', 
-                data: {
-                    labels: data.labels, // Menggunakan label dari fungsi agregasi
-                    datasets: [
-                        {
-                            label: 'Discharge (Wh)',
-                            data: data.dischargeData, // Nilai negatif untuk discharge
-                            backgroundColor: 'rgba(239, 68, 68, 0.8)', // Merah
-                            borderColor: 'rgba(239, 68, 68, 1)',
-                            borderWidth: 1,
-                        },
-                        {
-                            label: 'Charge (Wh)',
-                            data: data.chargeData, // Nilai positif untuk charge
-                            backgroundColor: 'rgba(16, 185, 129, 0.8)', // Hijau
-                            borderColor: 'rgba(16, 185, 129, 1)',
-                            borderWidth: 1,
-                        }
-                    ]
+    let chartInstance;
+    if (canvasId === 'whChargeCanvas') {
+        if (whChargeChart) whChargeChart.destroy();
+        chartInstance = whChargeChart;
+    } else {
+        if (whDischargeChart) whDischargeChart.destroy();
+        chartInstance = whDischargeChart;
+    }
+    
+    const isDark = document.body.classList.contains('dark');
+    const textColor = isDark ? '#f3f4f6' : '#1f2937'; 
+    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+    
+    const isCharge = chartType === 'Charge';
+    // Ambil nilai absolut untuk Discharge agar plot selalu positif
+    const chartData = isCharge ? data.chargeData : data.dischargeData.map(d => Math.abs(d)); 
+    const chartColor = isCharge ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)'; // Hijau vs Merah
+    const chartBorder = isCharge ? 'rgba(16, 185, 129, 1)' : 'rgba(239, 68, 68, 1)';
+
+    chartInstance = new Chart(ctx, {
+        type: 'bar', 
+        data: {
+            labels: data.labels, 
+            datasets: [
+                {
+                    label: chartType + ' (Wh)',
+                    data: chartData, 
+                    backgroundColor: chartColor, 
+                    borderColor: chartBorder,
+                    borderWidth: 1,
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: false,
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                    plugins: {
-                        legend: {
-                            position: 'bottom', // Tampilkan legend
-                            labels: {
-                                color: textColor
-                            }
-                        },
-                        title: {
-                            display: true,
-                            text: `Profil Energi Akumulasi (${periodLabel})`, 
-                            font: { size: 16, weight: 'bold' },
-                            color: textColor 
-                        },
-                        tooltip: {
-                             callbacks: {
-                                label: function(context) {
-                                    const value = context.parsed.y;
-                                    // Tampilkan nilai absolut
-                                    const type = value >= 0 ? 'Charge' : 'Discharge';
-                                    return `${type}: ${Math.abs(value).toFixed(3)} Wh`; 
-                                },
-                             }
-                        }
+                title: {
+                    display: false,
+                },
+                tooltip: {
+                    callbacks: {
+                       label: function(context) {
+                           return `${chartType}: ${Math.abs(context.parsed.y).toFixed(3)} Wh`; 
+                       },
+                    }
+                },
+            },
+            scales: {
+                x: {
+                    stacked: false, 
+                    grid: { display: false },
+                    ticks: { color: textColor }
+                },
+                y: {
+                    stacked: false, 
+                    title: {
+                        display: true,
+                        text: 'Energi (Wh)',
+                        color: textColor 
                     },
-                    scales: {
-                        x: {
-                            stacked: true, // Penting: Bar chart di-stack
-                            grid: {
-                                display: false 
-                            },
-                            ticks: {
-                                color: textColor 
-                            }
-                        },
-                        y: {
-                            stacked: true, // Penting: Bar chart di-stack
-                            title: {
-                                display: true,
-                                text: 'Energi Bersih (Wh)',
-                                color: textColor 
-                            },
-                            grid: {
-                                borderDash: [5, 5],
-                                color: gridColor 
-                            },
-                            ticks: {
-                                color: textColor 
-                            }
+                    grid: {
+                        borderDash: [5, 5],
+                        color: gridColor 
+                    },
+                    ticks: {
+                        color: textColor,
+                        callback: function(value) {
+                             // Tampilkan nilai absolut
+                            return Math.abs(value).toFixed(2); 
                         }
                     }
                 }
-            });
-            // Pastikan warna latar belakang chart juga diperbarui
-            updateChartColors(isDark);
+            }
         }
+    });
+    
+    // Assign instance globally
+    if (canvasId === 'whChargeCanvas') {
+        whChargeChart = chartInstance;
+    } else {
+        whDischargeChart = chartInstance;
+    }
+}
+
+
+/**
+ * MERENDER GRAFIK BATANG (BAR CHART) UNTUK PROFIL CHARGE DAN DISCHARGE.
+ * (Menggantikan fungsi renderChart lama)
+ */
+function renderEnergyCharts(data, periodLabel) { 
+    
+    // Update ringkasan angka global
+    totalChargeWhElement.textContent = `${data.totalChargeWh.toFixed(3)} Wh`;
+    totalDischargeWhElement.textContent = `${data.totalDischargeWh.toFixed(3)} Wh`;
+
+    // Render Charge Chart (Kiri)
+    renderSingleChart('whChargeCanvas', data, periodLabel, 'Charge');
+
+    // Render Discharge Chart (Kanan)
+    renderSingleChart('whDischargeCanvas', data, periodLabel, 'Discharge');
+    
+    // Pastikan warna latar belakang chart juga diperbarui
+    updateChartColors(document.body.classList.contains('dark'));
+}
 
 
         // --- Update Dashboard (Termasuk logic Min/Max baru) ---
