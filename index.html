@@ -338,9 +338,9 @@
         // Pemetaan Index Data 
         const DATA_INDICES = {
             TOTAL_VOLTAGE: 0, CELL_1: 1, CELL_2: 2, CELL_3: 3, CELL_4: 4, 
-            CURRENT: 5, POWER: 6, CAP_USED: 7, SOC: 8,
+            CURRENT: 5, POWER: 6, CAP_MAX: 7, SOC: 8,
             TEMP_1: 9, TEMP_2: 10, 
-            CAP_REMAINING: 11,
+            CAP_USED: 11,
             SOH_1: 12, SOH_2: 13, 
             STATUS_CHARGE: 14, STATUS_DISCHARGE: 15, SOH: 16,
         };
@@ -1185,8 +1185,8 @@ function renderEnergyCharts(data, periodLabel) {
             
             
 
-            const remainingCap = values[DATA_INDICES.CAP_REMAINING]; // Kapasitas Tersisa (V_rem)
-            const fullCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Penuh (Asumsi: V_full)
+            const remainingCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Tersisa (V_rem)
+            const fullCap = values[DATA_INDICES.CAP_MAX]; // Kapasitas Penuh (Asumsi: V_full)
             const current = values[DATA_INDICES.CURRENT]; // Arus (A)
             const requiredCap = fullCap - remainingCap; // Kapasitas yang Dibutuhkan untuk Penuh (Ah)
 
@@ -1224,8 +1224,8 @@ timeRemainingElement.textContent = `Waktu Sisa: ${timeRemainingText}`;
             totalVoltageElement.textContent = `${currentTotalVoltage.toFixed(2)} V`;
             currentElement.textContent = `${currentCurrent.toFixed(2)} A`;
             powerElement.textContent = `${currentPower.toFixed(2)} W`; 
-            capacityUsedElement.textContent = `${values[DATA_INDICES.CAP_USED].toFixed(2)} Ah`; 
-            remainingCapacityElement.textContent = `${values[DATA_INDICES.CAP_REMAINING].toFixed(2)} Ah`;
+            capacityUsedElement.textContent = `${values[DATA_INDICES.CAP_MAX].toFixed(2)} Ah`; 
+            remainingCapacityElement.textContent = `${values[DATA_INDICES.CAP_USED].toFixed(2)} Ah`;
             
             // --- 5. Update Parameter Detail Tambahan (Menggunakan SVG) ---
             let extraHtml = '';
