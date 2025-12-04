@@ -1187,7 +1187,7 @@ function renderEnergyCharts(data, periodLabel) {
 
             const remainingCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Tersisa (V_rem)
             const fullCap = values[DATA_INDICES.CAP_MAX]; // Kapasitas Penuh (Asumsi: V_full)
-            const current = values[DATA_INDICES.CURRENT]; // Arus (A)
+           // const current = values[DATA_INDICES.CURRENT]; // Arus (A)
             const requiredCap = fullCap - remainingCap; // Kapasitas yang Dibutuhkan untuk Penuh (Ah)
 
             socValueElement.textContent = `${soc}%`;
@@ -1201,14 +1201,14 @@ function renderEnergyCharts(data, periodLabel) {
 
 
 let timeRemainingText;
-if (current !== 0 && Math.abs(current) > 0.1) { 
-    if (current > 0) {
+if (currentCurrent !== 0 && Math.abs(currentCurrent) > 0.1) { 
+    if (currentCurrent > 0) {
         // CHARGE (TTF): (Kapasitas Penuh - Kapasitas Sisa) / Arus Charge
-        const hours = requiredCap / current;
+        const hours = requiredCap / currentCurrent;
         timeRemainingText = formatTime(hours) + " (TTF)"; 
     } else {
         // DISCHARGE (TTE): Kapasitas Sisa / Arus Discharge
-        const hours = remainingCap / Math.abs(current);
+        const hours = remainingCap / Math.abs(currentCurrent);
         timeRemainingText = formatTime(hours) + " (TTE)"; 
     }
 } else {
