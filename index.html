@@ -1176,25 +1176,21 @@ function renderEnergyCharts(data, periodLabel) {
 
             // --- 3. Update Ringkasan Utama (SOC, SOH, Suhu, Time Remaining) ---
             const soc = Math.min(100, Math.max(0, values[DATA_INDICES.SOC].toFixed(2)));
-            let sohValue = values[DATA_INDICES.SOH];
-            if (sohValue === undefined || isNaN(sohValue) || sohValue === null) {
-                sohValue = 0.0;
-            }
-            const sohAvg = Math.min(100, Math.max(0, sohValue.toFixed(2)));
+            const sohAvg = Math.min(100, Math.max(0, values[DATA_INDICES.SOH].toFixed(2)));
             const maxTemp = Math.max(values[DATA_INDICES.TEMP_1], values[DATA_INDICES.TEMP_2]).toFixed(1);
             
-            
-
-            const remainingCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Tersisa (V_rem)
-            const fullCap = values[DATA_INDICES.CAP_MAX]; // Kapasitas Penuh (Asumsi: V_full)
-           // const current = values[DATA_INDICES.CURRENT]; // Arus (A)
-            const requiredCap = fullCap - remainingCap; // Kapasitas yang Dibutuhkan untuk Penuh (Ah)
-
             socValueElement.textContent = `${soc}%`;
             socProgressElement.style.width = `${soc}%`;
             sohValueElement.textContent = `${sohAvg}%`;
             sohProgressElement.style.width = `${sohAvg}%`;
             tempValueElement.textContent = `${maxTemp}°C`;
+
+            const remainingCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Tersisa (V_rem)
+            const fullCap = values[DATA_INDICES.CAP_MAX]; // Kapasitas Penuh (Asumsi: V_full)
+            const current = values[DATA_INDICES.CURRENT]; // Arus (A)
+            const requiredCap = fullCap - remainingCap; // Kapasitas yang Dibutuhkan untuk Penuh (Ah)
+
+           
 
 
             
