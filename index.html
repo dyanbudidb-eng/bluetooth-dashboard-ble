@@ -1202,7 +1202,7 @@ if (current !== 0 && Math.abs(current) > 0.1) {
         // CHARGE (TTF): (Kapasitas Penuh - Kapasitas Sisa) / Arus Charge
         const hours = requiredCap / current;
         timeRemainingText = formatTime(hours) + " (TTF)"; 
-    } else if(current < 0) {
+    } else  {
         // DISCHARGE (TTE): Kapasitas Sisa / Arus Discharge
         const hours = remainingCap / Math.abs(current);
         timeRemainingText = formatTime(hours) + " (TTE)"; 
