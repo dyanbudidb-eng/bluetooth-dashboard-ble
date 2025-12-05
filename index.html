@@ -1199,12 +1199,12 @@ let timeRemainingText;
 if (current !== 0 && Math.abs(current) > 0.1) { 
     if (current > 0) {
         // CHARGE (TTF): (Kapasitas Penuh - Kapasitas Sisa) / Arus Charge
-        const hours1 = (fullCap - remainingCap) / current;
-        timeRemainingText = formatTime(hours1) + " (TTF)"; 
+        const hours = (fullCap - remainingCap) / current;
+        timeRemainingText = formatTime(hours) + " (TTF)"; 
     } else  {
         // DISCHARGE (TTE): Kapasitas Sisa / Arus Discharge
-        const hours2 = remainingCap / Math.abs(current);
-        timeRemainingText = formatTime(hours2) + " (TTE)"; 
+        const hours = remainingCap / Math.abs(current);
+        timeRemainingText = formatTime(hours) + " (TTE)"; 
     }
 } else {
     timeRemainingText = "Diam";
