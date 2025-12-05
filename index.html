@@ -1226,8 +1226,8 @@ function renderEnergyCharts(data, periodLabel) {
 
 // --- Logika Perhitungan Waktu Sisa ---
 
-const remainingCap = values[DATA_INDICES.CAP_USED]; // Kapasitas Tersisa (Ah)
-const fullCap = values[DATA_INDICES.CAP_MAX];       // Kapasitas Penuh (Ah)
+const remainingCap = values[DATA_INDICES.CAP_MAX]; // Kapasitas Tersisa (Ah)
+const fullCap = values[DATA_INDICES.CAP_USED];       // Kapasitas Penuh (Ah)
 const current = values[DATA_INDICES.CURRENT];       // Arus (A)
 const capToFull = fullCap - remainingCap;           // Kapasitas yang diperlukan untuk penuh (Ah)
 
