@@ -1296,15 +1296,31 @@ timeRemainingElement.textContent = `Waktu Sisa: ${timeRemainingText}`;
             let safetyClass = 'bg-green-100 text-green-600 border-green-400'; 
             let statusText = 'Normal';
 
-            if (maxTemp > 50) {
-                 safetyMsg = "PERINGATAN: Suhu Tinggi Terdeteksi! Melebihi 50°C.";
+            // Ambil status relay (Ganti DATA_INDICES sesuai dengan urutan data Anda)
+const isChargeOff = values[DATA_INDICES.STATUS_DISCHARGE] === 0; 
+const isDischargeOff = values[DATA_INDICES.STATUS_CHARGE] === 0;
+
+// LOGIKA PRIORITAS TERTINGGI: Short Circuit
+if (isChargeOff && isDischargeOff) {
+    safetyMsg = "BAHAYA KRITIS: Short Circuit Terdeteksi! Semua Relay Terputus.";
+    safetyClass = 'bg-red-600 text-white border-red-800 animate-pulse'; // Efek berkedip
+    statusText = 'SHORT CIRCUIT!';
+} else if (maxTemp > 45) {
+                 safetyMsg = "PERINGATAN: Suhu Tinggi Terdeteksi! Melebihi 45°C.";
                  safetyClass = 'bg-red-100 text-red-700 border-red-400';
                  statusText = 'Bahaya!';
-            } else if (deltaV > 150) {
-                 safetyMsg = "PERINGATAN: Delta Voltage Sangat Tinggi! Balancing diperlukan.";
+            } else if (deltaV > 50) {
+                 safetyMsg = "PERINGATAN: Delta Voltage Tinggi! Balancing diperlukan.";
                  safetyClass = 'bg-yellow-200 text-yellow-700 border-yellow-400';
                  statusText = 'Peringatan!';
+            } else if (soc >= 100 && current > 0.1) {
+                 safetyMsg = "PERINGATAN: Baterai Penuh. Hentikan pengisian.";
+                 statusText = 'Penuh';
+            } else if (soc <= 10) {
+                 safetyMsg = "PERINGATAN: Kapasitas baterai menipis (<10%).";
+                 statusText = 'Low Battery';
             }
+            
             
             // Logic Dark Mode untuk Status Keselamatan
             if (document.body.classList.contains('dark')) {
